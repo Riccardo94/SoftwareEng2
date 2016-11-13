@@ -80,7 +80,7 @@ one sig InProcessing extends VehicleState{}
 //FACTS
 
 fact reservationHasOneUser{
-	all disj u1,u2: User | u1.reservation!=u2.reservation
+	all disj u1,u2: User | u1.reservation!=u2.reservation or (u1.reservation=none and u2.reservation=none)
 	all r:Reservation | one u:User | u.reservation=r
 }
 
@@ -199,9 +199,10 @@ pred ShowAFullPowerStation{
 	one p:PowerStation | p.capacity = #p.vehicles and p.capacity=3
 }
 
-pred Show{}
+pred Show{
+}
 
 
-run ShowVehiclesPossibleStates for 6 but 8 Int
+run ShowVehiclesPossibleStates for 8 but 8 Int
 run ShowAFullPowerStation for 3 but 8 Int
 run Show for 4 but 8 Int
