@@ -1,5 +1,7 @@
 open util/boolean 
 
+
+// SIGNATURES
 sig Position{}
 
 one sig SafeArea{
@@ -17,11 +19,21 @@ sig PowerStation{
 	vehicles.position = position
 }
 
-
+// We have ignored many useless information for the user like email, driving license
 sig User{	
 	position: one Position,
-	reservation: lone Reservation
+	reservation: lone Reservation,
+	isInBlackList: one Bool
+}{
+	isInBlackList.isTrue implies #reservation=0
 }
+
+sig Technician {
+	isTakingCareOf: lone Vehicle
+}{
+	isTakingCareOf.state in InProcessing
+}
+
 
 sig Vehicle{
 	position: one Position,
@@ -42,6 +54,7 @@ sig Reservation{
 }{
 vehicle.state in Reserved
 time>0
+time<60
 }
 
 sig Ride{
@@ -53,14 +66,21 @@ sig Ride{
 	passengersNumber>0 && passengersNumber<=5 
 	vehicle.state in InUse
 	#user.reservation=0
+	user.isInBlackList.isFalse
 }
 
+abstract sig VehicleState{}
+one sig Available extends VehicleState{}
+one sig Reserved extends VehicleState{}
+one sig InUse extends VehicleState{}
+one sig NotAvailable extends VehicleState{}
+one sig LowBattery extends VehicleState{}
+one sig InProcessing extends VehicleState{}
+
+//FACTS
+
 fact reservationHasOneUser{
-<<<<<<< HEAD
-	all r:Reservation, u,u1:User | (u.reservation=r && u!=u1) => u1.reservation!=r
-=======
 	all disj u1,u2: User | u1.reservation!=u2.reservation
->>>>>>> eefab7d07533d073efb2df811b562284d0ab58ef
 	all r:Reservation | one u:User | u.reservation=r
 }
 
@@ -78,13 +98,7 @@ fact vehicleInUseHasOneRide{
 	all v:Vehicle | v.state in InUse => one r:Ride | r.vehicle=v
 }
 
-abstract sig VehicleState{}
-one sig Available extends VehicleState{}
-one sig Reserved extends VehicleState{}
-one sig InUse extends VehicleState{}
-one sig NotAvailable extends VehicleState{}
-one sig LowBattery extends VehicleState{}
-one sig InProcessing extends VehicleState{}
+
 
 fact availableVehicle {
 	all v1: Vehicle | v1.state in Available implies (v1.batteryLevel>20 and v1.isIgnited.isFalse and
@@ -129,30 +143,65 @@ fact thePositionOfAPowerStationIsUnique {
 	all p1,p2 :PowerStation | p1!=p2 implies p1.position != p2.position
 }
 
+fact technicianWork{
+	all v:Vehicle | v.state in InProcessing implies one t:Technician | v in t.isTakingCareOf 
+}
+
+// ASSERTIONS
+
 assert allTheVehiclesNotIgnitedAreInASafeArea{
 	all v:Vehicle | v.isIgnited.isFalse implies v.position in SafeArea.position
 }
 
-check allTheVehiclesNotIgnitedAreInASafeArea for 8 Int
 
 assert numberOfTheRidesAreCorrect{
 	#Ride = #{v:Vehicle | v.state in InUse}
 }
 
-check numberOfTheRidesAreCorrect for 8 Int
 
 assert numberOfTheReservationsAreCorrect{
 	#Reservation = #{v:Vehicle | v.state in Reserved}
 }
 
 
-check numberOfTheReservationsAreCorrect for 8 Int
-
-pred Show{
-#Vehicle=1
-#Reservation=1
+assert blackListUser{
+	all r:Ride | r.user.isInBlackList.isFalse
+	all u:User | u.isInBlackList.isTrue implies u.reservation = none
 }
 
-run Show for 6 but 8 Int
+assert numberOfTechniciansIsGreaterOrEqualThanInProcessingVehicles{
+	#Technician >= #{v:Vehicle | v.state in InProcessing}
+}
 
 
+check allTheVehiclesNotIgnitedAreInASafeArea for 8 Int
+check numberOfTheRidesAreCorrect for 8 Int
+check numberOfTheReservationsAreCorrect for 8 Int
+check blackListUser for 8 Int
+check numberOfTechniciansIsGreaterOrEqualThanInProcessingVehicles for 8 Int
+
+pred ShowVehiclesPossibleStates{
+#Vehicle = 6
+#User = 3
+#Technician = 2
+some v:Vehicle | v.state in Available
+some v:Vehicle | v.state in Reserved
+some v:Vehicle | v.state in NotAvailable
+some v:Vehicle | v.state in InUse
+some v:Vehicle | v.state in InProcessing
+some v:Vehicle | v.state in LowBattery
+}
+
+// the 3 vehicles are all parked in the powerStation but can be not plugged in
+pred ShowAFullPowerStation{
+	#PowerStation=1
+	#Vehicle = 3
+	one p:PowerStation | p.capacity = #p.vehicles and p.capacity=3
+}
+
+pred Show{}
+
+
+run ShowVehiclesPossibleStates for 6 but 8 Int
+run ShowAFullPowerStation for 3 but 8 Int
+run Show for 4 but 8 Int
