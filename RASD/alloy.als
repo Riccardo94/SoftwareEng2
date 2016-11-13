@@ -106,8 +106,6 @@ fact aCarIsAlwaysParkedInASafeArea{
 	all v1:Vehicle | v1.isIgnited.isFalse implies v1.position in SafeArea.position
 }
 
-
-
 pred Show{
 #Vehicle=6
 some v:Vehicle | v.state in InUse and v.position & SafeArea.position = none
