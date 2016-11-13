@@ -1,9 +1,6 @@
 open util/boolean 
 
-sig Position{
-	latitude: Int, //float
-	longitude: Int //float
-}
+sig Position{}
 
 sig PaymentMethod{}
 
@@ -63,7 +60,7 @@ sig Ride{
 
 fact reservationHasOneUser{
 	all r:Reservation, u,u1:User | (u.reservation=r && u!=u1) => u1.reservation!=r
-	//all r:Reservation | one u:User | u.reservation=r
+	all r:Reservation | one u:User | u.reservation=r
 }
 
 fact vehicleHasOneReservation{
@@ -96,8 +93,11 @@ one sig NotAvailable extends VehicleState{}
 one sig LowBattery extends VehicleState{}
 one sig InProcessing extends VehicleState{}
 
-pred Show{}
+pred Show{
+	#Vehicle=1
+	some v:Vehicle | v.state in LowBattery
+}
 
-run Show for 3
+run Show for 3 but 8 Int
 
 
