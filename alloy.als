@@ -1,21 +1,17 @@
 open util/boolean 
 
-sig Position{
-	latitude: Int, //float
-	longitude: Int //float
-}
+sig Position{}
 
 sig PaymentMethod{}
 
-sig SafeArea{}
-
-abstract sig Parking{}
+one sig SafeArea{
+	position: set Position	
+}
 
 /*sig PowerStation extends Parking{
 	position = one Position
 }*/
 
-sig LegalParking extends Parking{}
 
 sig User{	
 	position: one Position,
@@ -32,23 +28,16 @@ sig Vehicle{
 }
 {
 	batteryLevel>=0 && batteryLevel<=100
-	isIgnited = True <=> state in InUse
-	isInCharge = True => state in VehicleState - InUse
 }
 
-fact stateWithLowBattery{
-	all v:Vehicle | v.batteryLevel<20 => v.state in LowBattery
-}
-
-fact LowBatteryVehicleNotReserved{
-	no r:Reservation | r.vehicle.batteryLevel<20 //non va e non so perchè
-}
 
 sig Reservation{
 	time: one Int,
 	vehicle: one Vehicle
+}{
+vehicle.state in Reserved
+time>0
 }
-{vehicle.state in Reserved}
 
 sig Ride{
 	passengersNumber: one Int,
@@ -57,35 +46,28 @@ sig Ride{
 	user: one User
 }
 {
-	passengersNumber>0 && passengersNumber<5 && moneyToCharge>0
+	passengersNumber>0 && passengersNumber<=5 && moneyToCharge>0
 	vehicle.state in InUse
+	#user.reservation=0
 }
 
 fact reservationHasOneUser{
-	all r:Reservation, u,u1:User | (u.reservation=r && u!=u1) => u1.reservation!=r
-	//all r:Reservation | one u:User | u.reservation=r
+	all disj u1,u2: User | u1.reservation!=u2.reservation
+	all r:Reservation | one u:User | u.reservation=r
 }
 
-fact vehicleHasOneReservation{
-	all v:Vehicle, r,r1:Reservation | (r.vehicle=v && r!=r1) => r1.vehicle!=v
-	//all v:Vehicle | one r:Reservation | v.state in Reserved => r.vehicle=v
+fact vehicleReservedHasOneReservation{
+	all disj r1,r2: Reservation | r1.vehicle!=r2.vehicle
+	all v:Vehicle | v.state in Reserved => one r:Reservation | r.vehicle=v
 }
 
-fact vehicleInUseHasNoReservation{
-	all v:Vehicle, r:Reservation | v.state in InUse => r.vehicle!=v
-} 
-
-fact userWithRideHasNoReservation{
-	all r:Ride,u:User | r.user=u => #u.reservation=0
-	all r:Reservation,ri:Ride,u:User | u.reservation=r => #ri.user=0
-}
 
 fact userHaveOneRide{
-	all u:User, r,r1:Ride | (r.user=u && r!=r1) => r1.user!=u
+	all disj r1,r2: Ride | r1.user != r2.user
 }
 
 fact vehicleInUseHasOneRide{
-//	all v:Vehicle | one r:Ride | v.state in InUse => r.vehicle=v
+	all v:Vehicle | v.state in InUse => one r:Ride | r.vehicle=v
 }
 
 abstract sig VehicleState{}
@@ -96,8 +78,42 @@ one sig NotAvailable extends VehicleState{}
 one sig LowBattery extends VehicleState{}
 one sig InProcessing extends VehicleState{}
 
-pred Show{}
 
-run Show for 3
+fact availableVehicle {
+	all v1: Vehicle | v1.state in Available implies (v1.batteryLevel>20 and v1.isIgnited.isFalse and
+	v1.isLocked.isTrue)
+}
+
+fact reservedVehicle {
+	all v1: Vehicle | v1.state in Reserved implies ( v1.batteryLevel>20 and v1.isIgnited.isFalse)
+}
+
+fact inUseVehicle {
+	all v1: Vehicle | v1.state in InUse implies (v1.isIgnited.isTrue and v1.isInCharge.isFalse)
+}
+
+fact lowBatteryVehicle {
+	all v1: Vehicle | v1.state in LowBattery implies (v1.batteryLevel<20 and
+	v1.isIgnited.isFalse and v1.isLocked.isTrue)
+}
+
+fact inProcessingVehicle {
+	all v1: Vehicle | v1.state in InProcessing implies (v1.batteryLevel<20 and
+	v1.isInCharge.isFalse)
+}
+
+fact aCarIsAlwaysParkedInASafeArea{
+	all v1:Vehicle | v1.isIgnited.isFalse implies v1.position in SafeArea.position
+}
+
+
+
+pred Show{
+#Vehicle=6
+some v:Vehicle | v.state in InUse and v.position & SafeArea.position = none
+
+}
+
+run Show for 6 but 8 Int
 
 
