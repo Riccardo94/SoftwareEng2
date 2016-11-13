@@ -37,12 +37,12 @@ sig Vehicle{
 }
 
 fact stateWithLowBattery{
-	all v:Vehicle | v.batteryLevel<20 <=> v.state in LowBattery
+	all v:Vehicle | v.batteryLevel<20 => v.state in LowBattery
 }
 
-/*fact LowBatteryVehicleNotReserved{
+fact LowBatteryVehicleNotReserved{
 	no r:Reservation | r.vehicle.batteryLevel<20 //non va e non so perchè
-}*/
+}
 
 sig Reservation{
 	time: one Int,
@@ -68,7 +68,7 @@ fact reservationHasOneUser{
 
 fact vehicleHasOneReservation{
 	all v:Vehicle, r,r1:Reservation | (r.vehicle=v && r!=r1) => r1.vehicle!=v
-	all v:Vehicle | one r:Reservation | v.state in Reserved => r.vehicle=v
+	//all v:Vehicle | one r:Reservation | v.state in Reserved => r.vehicle=v
 }
 
 fact vehicleInUseHasNoReservation{
@@ -85,7 +85,7 @@ fact userHaveOneRide{
 }
 
 fact vehicleInUseHasOneRide{
-	all v:Vehicle | one r:Ride | v.state in InUse => r.vehicle=v
+//	all v:Vehicle | one r:Ride | v.state in InUse => r.vehicle=v
 }
 
 abstract sig VehicleState{}
